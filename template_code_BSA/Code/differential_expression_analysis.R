@@ -3,14 +3,9 @@
 ####################################
 
 
-# Da terminale creazione cartella per salvataggio tabelle e grafici
-cd ..
-mkdir -p results_de_analysis
-
-
-# Ci spostiamo ora sulla console
+# Ci spostiamo ora sulla CONSOLE
 # Settaggio working directory
-setwd("/workspace/class-rnaseq/analysis_tutoring01")
+setwd("/workspace/class-rnaseq/analysis_tutoring02")
 
 # Caricamento delle librerie
 library(DESeq2)
@@ -51,7 +46,7 @@ dataset <- tibble(
 # file.path() --> funzione per costruire i path dei file
 # paste0() --> funzione per combinare il nome di ogni campione con il suffisso .quant
 # quant.sf --> nome del file di quantificazione presente in ogni sottocartella
-files <- file.path("/workspace/class-rnaseq/analysis_tutoring01/reads", paste0(dataset$sample,".quant"), "quant.sf")
+files <- file.path("/workspace/class-rnaseq/analysis_tutoring02/reads", paste0(dataset$sample,".quant"), "quant.sf")
 files
 names(files)
 
@@ -111,8 +106,8 @@ head(counts(dds))
 
 
 # Salvataggio immagine in caso di chiusura di gitpod
-save.image("tutoring01.RData")
-# Per ricaricare l'mmagine comando load("tutoring01.RData")
+save.image("tutoring02.RData")
+# Per ricaricare l'immagine comando load("tutoring02.RData")
 
 
 
@@ -122,14 +117,14 @@ save.image("tutoring01.RData")
 
 
 # La funzione counts() estrae la matrice di conteggi dal DESeqDataSet
-# rowSums() calcola la somma dei conteggi per ciascun gene su tutti i campioni
+# rowSums() calcola la somma dei conteggi per ciascun gene (righe) su tutti i campioni
 # Vengono mantenuti solo i geni con una somma di conteggi >= 10
 keep <- rowSums(counts(dds)) >= 10
 dds <- dds[keep,]
 
 
-# Impostazione del livello di riferimento per la condizione sperimentale
-# relevel() consente di definire il livello di base (controllo) per la variabile condition
+# Impostazione del livello di riferimento per la condizione sperimentale. Il livello di riferimento è sempre il primo riportato.
+# relevel() consente di definire il livello di base (controllo) per la variabile condition.
 # Importante per l'interpretazione dei risultati, poiché i confronti saranno fatti rispetto al controllo
 dds$condition
 dds$condition <- relevel(dds$condition, ref = "control")
@@ -157,7 +152,7 @@ ntd <- normTransform(dds)
 
 # Selezione dei 20 geni con la media di espressione più alta
 # (counts(dds, normalized = TRUE)) --> estrae la matrice dei conteggi normalizzati dal dds
-# rowMeans() --> calcola la media di ciascuna riga (cioè per ogni gene) nei vari campioni
+# rowMeans() --> calcola la media per ciascun gene (righe) nei vari campioni
 # order() --> restituisce un vettore di indici ordinati in modo decresecente (decreasing = TRUE) in base alla media
 # [1:20] --> seleziona i primi 20 geni dal vettore ordinato (quindi i 20 con la media più alta)
 select <- order(rowMeans(counts(dds, normalized = TRUE)),
@@ -173,23 +168,23 @@ df <- as.data.frame(colData(dds)[,c("condition")])
 # [select,] --> seleziona solo le righe corrispondenti ai 20 geni selezionati
 # cluster_cols = FALSE --> disabilita il clustering delle colonne
 # annotation_col = df$condition --> colora le colonne in base alla condizione
-pdf("results_de_analysis/heatmap.pdf")
+pdf("heatmap.pdf")
 pheatmap(assay(ntd)[select,],
          cluster_cols = FALSE, annotation_col = df$condition)
 dev.off()
 
 # Creazione del grafico di PCA per visualizzare la variabilità tra i campioni utilizzando la variabile condition
-pdf("results_de_analysis/plotPCA.pdf")
+pdf("plotPCA.pdf")
 plotPCA(ntd, intgroup = c("condition"))
 dev.off()
 
 # Visualizzazione le stime di dispersione per i dati del modello DESeq2
-pdf("results_de_analysis/plotDispEsts.pdf")
+pdf("plotDispEsts.pdf")
 plotDispEsts(dds)
 dev.off()
 
 # Salvataggio immagine in caso di chiusura di gitpod
-save.image("tutoring01.RData")
+save.image("tutoring02.RData")
 
 
 
@@ -212,7 +207,7 @@ resOrdered
 
 
 # Crea un plot di tipo MA per visualizzare il log2foldchange rispetto alla media normalizzata
-pdf("results_de_analysis/plotMA.pdf")
+pdf("plotMA.pdf")
 plotMA(res, ylim = c(-3, 3))
 dev.off()
 
@@ -221,7 +216,7 @@ dev.off()
 # gene = which.min(res$padj) individua e restituisce l'indice del gene con il valore di padj più basso (più significativo)
 # `intgroup` specifica la variabile del design che deve essere utilizzata nel grafico
 # gene ENSG00000160191
-pdf("results_de_analysis/plotCounts.pdf")
+pdf("plotCounts.pdf")
 plotCounts(dds, gene = which.min(res$padj), intgroup = "condition")
 dev.off()
 
@@ -246,17 +241,17 @@ resdata <- resdata %>%
   relocate(gene, .before = everything())
 
 # Salvataggio risultati come file TSV (tab-separated values)
-write_tsv(resdata, "results_de_analysis/results.tsv")
+write_tsv(resdata, "results.tsv")
 
 # Estrazione dei geni significativi (padj < 0.05)
 significant_genes <- as_tibble(resdata %>%
                                  filter(padj < 0.05))
 
 # Salvataggio risultati significativi
-write_tsv(significant_genes, "results_de_analysis/significant_genes.tsv")
+write_tsv(significant_genes, "significant_genes.tsv")
 
 # Salvataggio immagine in caso di chiusura di gitpod
-save.image("tutoring01.RData")
+save.image("tutoring02.RData")
 
 
 
@@ -273,6 +268,7 @@ sig_genes <- resdata$gene[which(resdata$padj < 0.05)]
 
 # Analisi di arricchimento che consente di identificare i termini GO (Gene Ontology) rappresentati tra i geni significativi
 # in particolare ci concentriamo sui termini GO relativi ai processi biologici (BP), alle funzioni molecolari (MF) e ai componenti cellulari (CC)
+# modificando ont = "BP", "MF" o "CC" è possibile concentrarsi sulle diverse categorie di Gene Ontology
 ego_BP <- enrichGO(gene = sig_genes,
                    universe = unique(tx2gene$GENEID),
                    OrgDb = org.Hs.eg.db,
@@ -300,14 +296,16 @@ ego_CC <- enrichGO(gene = sig_genes,
                    pvalueCutoff = 0.05)
 ego_CC
 
-# Creazione di un dotplot che consente la visualizzazione dei primi 30 termini GO più significativi in base al valore di padj
-pdf("results_de_analysis/dotplot_ego.pdf")
+# Creazione di un dotplot che consente la visualizzazione dei termini GO più significativi (in questo caso relativi alle funzioni molecolari) in base al valore di padj
+# L'opzione showCategory = 10 mostra il numero di categorie significative da mostrare, in questo caso 10
+pdf("dotplot_ego.pdf")
 dotplot(ego_MF, showCategory = 10)
 dev.off()
 
-# Creazione di un gene-concept network per visualizzare la connessione tra i geni e i termini GO arricchiti
-pdf("results_de_analysis/cnetplot_ego.pdf")
-cnetplot(ego, foldChange = resdata$log2FoldChange[which(resdata$padj<0.5)], showCategory = 10)
+# Creazione di un gene-concept network per visualizzare la connessione tra i geni e i termini GO arricchiti (in questo caso relativi alle funzioni molecolari)
+# L'opzione showCategory in questo caso è lasciata come default, verrano quindi mostrare le 5 categorie più significative
+pdf("cnetplot_ego.pdf")
+cnetplot(ego_MF, foldChange = resdata$log2FoldChange[which(resdata$padj<0.5)])
 dev.off()
 
 
@@ -318,7 +316,7 @@ dev.off()
 
 
 # DisGeNET è un database di associazioni tra malattie e geni
-# Utile per vedere se alcuni dei nostri geni significativi sono già stati descritti in alcune patologie
+# Utile per vedere se i nostri geni significativi sono già stati descritti in alcune patologie
 
 # Lettura del file di associazione tra malattie e geni
 gda <- read_tsv(gzfile("/workspace/class-rnaseq/datasets_reference_only/trascriptome/all_gene_disease_associations.tsv.gz"))
@@ -328,12 +326,6 @@ gda <- read_tsv(gzfile("/workspace/class-rnaseq/datasets_reference_only/trascrip
 # disease2name --> associazione tra malattie e nomi delle malattie
 disease2gene = gda[, c("diseaseId", "geneId")]
 disease2name = gda[, c("diseaseId", "diseaseName")]
-
-# Arricchimento funzionale con enrcher(), funzione del pacchetto clusterProfiler
-# entrez_genes_sig --> vettore di ID dei geni significativi
-disgnet = enricher(entrez_genes_sig, 
-                   TERM2GENE = disease2gene, 
-                   TERM2NAME = disease2name)
 
 # Creazione di un universo di geni che contanga per ogni gene annotato nel genoma umano (org.Hs.eg.db):
 # ENTREZID --> ID assegnato da NCBI Entrez Gene
@@ -352,10 +344,18 @@ universe <- AnnotationDbi::select(org.Hs.eg.db,
 # $ENTREZID --> restituisce gli ID Entrez corrispondenti ai geni significativi
 entrez_genes_sig <- unique(universe[which(universe$ENSEMBL %in% sig_genes),]$ENTREZID)
 
+# Arricchimento funzionale con enrcher(), funzione del pacchetto clusterProfiler
+# entrez_genes_sig --> vettore di ID dei geni significativi
+disgnet = enricher(entrez_genes_sig, 
+                   TERM2GENE = disease2gene, 
+                   TERM2NAME = disease2name)
+
+
 # Creazione di un gene-concept network per visualizzare le relazioni tra le malattie e i geni significativi associati
 # foldChange = resdata$log2FoldChange[which(resdata$padj<0.5)] --> specifica il log2FoldChange per ciascun gene significativo (padj < 0.5)
-pdf("results_de_analysis/cnetplot_disgnet.pdf")
-cnetplot(disgnet, foldChange = resdata$log2FoldChange[which(resdata$padj<0.5)], showCategory = 10)
+# L'opzione showCategory in questo caso è lasciata come default, verrano quindi mostrare le 5 categorie più significative
+pdf("cnetplot_disgnet.pdf")
+cnetplot(disgnet, foldChange = resdata$log2FoldChange[which(resdata$padj<0.5)])
 dev.off()
 
 
@@ -365,10 +365,14 @@ dev.off()
 ##########
 
 
-# Prima di pushare su GitHub rimuoviamo prima le cartelle che contengono file pesanti come le reads
+# Prima di pushare su GitHub rimuoviamo prima le cartelle che contengono file pesanti
+# Assicuriamoci di essere nella correta working directory
+# Tutti i seguenti comandi vanno eseguiti dal TERMINALE di RStudio non dalla CONSOLE
+cd /workspace/class-rnaseq/
 rm -rf */.git
-rm -r dataset_tutoring_rnaseq01
-rm -r analysis_tutoring01/reads
+rm -r dataset_tutoring_rnaseq02
+rm -r analysis_tutoring02/reads
+rm analysis_tutoring02/tutoring02.RData 
 
 git add *
 git commit -m "analisi RNA-Seq primo tutorato"

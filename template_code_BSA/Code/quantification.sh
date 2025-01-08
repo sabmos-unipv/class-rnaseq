@@ -9,20 +9,24 @@ git clone https://github.com/lescai-teaching/dataset_tutoring_rnaseq02.git # Dat
 
 # Creazione della cartella di lavoro
 cd /workspace/class-rnaseq
-mkdir -p analysis_tutoring01
-cd analysis_tutoring01
+mkdir -p analysis_tutoring02
+cd analysis_tutoring02
 
 
 # Symbolic links alle reads originali
 mkdir -p reads
 cd reads
-ln -s /workspace/class-rnaseq/dataset_tutoring_rnaseq01/raw_data/* .
+ln -s /workspace/class-rnaseq/dataset_tutoring_rnaseq02/raw_data/* .
 
 
 
 ###################
 # Quantificazione #
 ###################
+
+# Provare a eseguire salmon digitando "salmon" sul terminale
+# A volte il comando potrebbe fallire sul terminale di RStudio su Codespaces
+# Per risolvere digitare il comando: export PATH=${PATH}:/usr/local/bin
 
 
 # Ciclo attraverso tutti i file che terminano con "_1.fasta.gz"
